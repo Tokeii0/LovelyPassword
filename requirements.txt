@@ -1,0 +1,7 @@
+PySide6>=6.5.0
+cryptography>=41.0.0
+paramiko>=3.3.0
+pyfreerdp>=0.1.0
+SQLAlchemy>=2.0.0
+python-dotenv>=1.0.0
+pyperclip>=1.8.2 
