@@ -1,7 +1,7 @@
 <div align="center">
   <img src="resources/icons/logo.png" alt="LovelyPassword Logo" width="120">
   <h1>LovelyPassword</h1>
-  <p>一款现代化的密码管理工具，安全存储和管理您的所有密码</p>
+  <p>自用密码管理工具</p>
   <p>
     <a href="#功能特性">功能特性</a> •
     <a href="#安全特性">安全特性</a> •
@@ -127,15 +127,3 @@ python run.py
 1. 添加新密码时选择"数据库连接"类型
 2. 从下拉菜单选择常见的数据库端口，或输入自定义端口
 3. 填写必要的连接信息
-
-## 📝 许可证
-
-本项目采用 MIT 许可证 - 详情请参阅 [LICENSE](LICENSE) 文件
-
-## 👥 贡献
-
-欢迎提交问题和拉取请求！
-
-## 📧 联系我们
-
-如有任何问题或建议，请联系我们：contact@lovelypassword.com
