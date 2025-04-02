@@ -2,7 +2,8 @@ from PySide6.QtWidgets import (QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
                              QTreeWidget, QTreeWidgetItem, QTableWidget,
                              QTableWidgetItem, QPushButton, QLineEdit,
                              QLabel, QStatusBar, QMessageBox, QToolBar, 
-                             QSizePolicy, QHeaderView, QFrame, QMenu)
+                             QSizePolicy, QHeaderView, QFrame, QMenu,
+                             QFileDialog)
 from PySide6.QtCore import Qt, QTimer, QSize, QPoint
 from PySide6.QtGui import QIcon, QFont, QPixmap, QAction, QColor, QPalette, QLinearGradient, QCursor
 import pyperclip
@@ -12,6 +13,7 @@ from src.views.dialogs.settings import SettingsDialog
 from src.views.dialogs.category import CategoryDialog
 from src.models.category import Category
 from src.utils.connection import ConnectionManager
+from src.utils.import_export import ImportExportManager
 from src.views.dialogs.password_detail import PasswordDetailDialog
 from src.views.custom_titlebar import CustomTitleBar
 import src.utils.resource_helper as resource_helper
@@ -117,6 +119,12 @@ class MainWindow(QMainWindow):
         self.add_button.setFixedWidth(120)
         self.add_button.clicked.connect(self.add_password)
         
+        # 导入导出按钮
+        self.import_export_button = QPushButton("导入/导出")
+        self.import_export_button.setFixedHeight(36)
+        self.import_export_button.setFixedWidth(100)
+        self.import_export_button.clicked.connect(self.show_import_export_menu)
+        
         # 设置按钮
         self.settings_button = QPushButton("设置")
         self.settings_button.setFixedHeight(36)
@@ -132,6 +140,7 @@ class MainWindow(QMainWindow):
         self.button_layout = QHBoxLayout()
         self.button_layout.addWidget(self.settings_button)
         self.button_layout.addWidget(self.lock_button)
+        self.button_layout.addWidget(self.import_export_button)
         self.button_layout.addStretch()
         self.button_layout.addWidget(self.add_button)
         self.right_layout.addLayout(self.button_layout)
@@ -172,12 +181,17 @@ class MainWindow(QMainWindow):
             return
             
         passwords = self.password_manager.search_passwords(query)
+        self.filtered_password_list = passwords  # 保存筛选后的密码列表
+        self.is_filtered = True  # 设置筛选状态
         self.update_password_table(passwords)
         
     def load_passwords(self, category_item: QTreeWidgetItem):
         """加载指定类别的密码"""
         category_id = category_item.data(0, Qt.UserRole)
         passwords = self.password_manager.get_passwords_by_category(category_id)
+        self.password_list = passwords  # 保存当前加载的密码列表
+        self.filtered_password_list = []  # 清空筛选列表
+        self.is_filtered = False  # 重置筛选状态
         self.update_password_table(passwords)
         
     def update_password_table(self, passwords):
@@ -522,3 +536,103 @@ class MainWindow(QMainWindow):
         current_item = self.category_tree.currentItem()
         if current_item and self.password_manager.encryption_manager and self.password_manager.encryption_manager.cipher_suite:
             self.load_passwords(current_item)
+            
+    def show_import_export_menu(self):
+        """显示导入导出菜单"""
+        menu = QMenu(self)
+        
+        # 导出功能
+        export_action = menu.addAction("导出密码到Excel")
+        export_action.triggered.connect(self.export_passwords)
+        
+        # 导入功能
+        import_action = menu.addAction("从Excel导入密码")
+        import_action.triggered.connect(self.import_passwords)
+        
+        # 显示菜单
+        menu.exec_(QCursor.pos())
+    
+    def export_passwords(self):
+        """导出密码到Excel文件"""
+        try:
+            # 检查是否有密码可导出
+            if not self.password_list and not self.filtered_password_list:
+                QMessageBox.information(self, "提示", "没有可导出的密码")
+                return
+            
+            # 选择保存文件的路径
+            file_path, _ = QFileDialog.getSaveFileName(
+                self, "导出密码", "", "Excel文件 (*.xlsx)"
+            )
+            
+            if not file_path:
+                return  # 用户取消了操作
+                
+            # 如果文件名没有.xlsx后缀，添加它
+            if not file_path.lower().endswith('.xlsx'):
+                file_path += '.xlsx'
+            
+            # 确定要导出的密码列表
+            passwords_to_export = self.filtered_password_list if self.is_filtered else self.password_list
+            
+            # 执行导出
+            success = ImportExportManager.export_to_xlsx(passwords_to_export, file_path)
+            
+            if success:
+                QMessageBox.information(self, "成功", f"已成功导出 {len(passwords_to_export)} 个密码到 {file_path}")
+            else:
+                QMessageBox.warning(self, "失败", "导出密码失败")
+                
+        except Exception as e:
+            QMessageBox.critical(self, "错误", f"导出过程中发生错误: {str(e)}")
+    
+    def import_passwords(self):
+        """从Excel文件导入密码"""
+        try:
+            # 选择要导入的文件
+            file_path, _ = QFileDialog.getOpenFileName(
+                self, "导入密码", "", "Excel文件 (*.xlsx)"
+            )
+            
+            if not file_path:
+                return  # 用户取消了操作
+            
+            # 确认导入
+            reply = QMessageBox.question(
+                self,
+                "确认导入",
+                "导入将添加新的密码记录，不会覆盖现有密码。确定要继续吗？",
+                QMessageBox.Yes | QMessageBox.No
+            )
+            
+            if reply != QMessageBox.Yes:
+                return
+            
+            # 执行导入
+            success_count, fail_count, error_message = ImportExportManager.import_from_xlsx(
+                file_path, self.password_manager
+            )
+            
+            # 显示导入结果
+            if success_count > 0:
+                # 重新加载密码列表
+                current_item = self.category_tree.currentItem()
+                if current_item:
+                    self.load_passwords(current_item)
+                
+                result_message = f"导入完成:\n成功: {success_count} 条记录"
+                if fail_count > 0:
+                    result_message += f"\n失败: {fail_count} 条记录"
+                    if error_message:
+                        result_message += f"\n\n错误详情:\n{error_message}"
+                
+                # 根据是否有失败决定显示什么类型的消息框
+                if fail_count > 0:
+                    QMessageBox.warning(self, "导入结果", result_message)
+                else:
+                    QMessageBox.information(self, "导入成功", result_message)
+            else:
+                QMessageBox.critical(self, "导入失败", f"导入失败，没有成功导入任何记录。\n\n{error_message}")
+                
+        except Exception as e:
+            QMessageBox.critical(self, "错误", f"导入过程中发生错误: {str(e)}")

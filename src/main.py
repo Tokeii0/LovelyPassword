@@ -1,24 +1,42 @@
 import sys
+import os
 import warnings
 from cryptography.utils import CryptographyDeprecationWarning
 from PySide6.QtWidgets import QApplication
 from PySide6.QtGui import QIcon
+from PySide6.QtCore import Qt
 from src.views.main_window import MainWindow
 from src.views.dialogs.login import LoginDialog
 import src.utils.resource_helper as resource_helper
+from src.utils.font_helper import set_application_font, optimize_font_rendering
 
 # 全局过滤 TripleDES 警告
 warnings.filterwarnings("ignore", category=CryptographyDeprecationWarning, 
                       message="TripleDES has been moved to cryptography.hazmat.decrepit.ciphers.algorithms.TripleDES")
 
 def main():
-    """应用程序主入口"""
-    app = QApplication(sys.argv)
+    # 在导入任何其他模块前设置环境变量，禁用 cryptography 的废弃警告
+    os.environ['CRYPTOGRAPHY_SUPPRESS_DEPRECATION_WARNINGS'] = '1'
     
-    # 设置应用程序图标
+    # 禁用Qt的显示器接口警告消息
+    os.environ['QT_LOGGING_RULES'] = '*.debug=false;qt.qpa.*=false'
+    
+    # 创建应用程序
+    app = QApplication(sys.argv)
+    app.setApplicationName("LovelyPassword")
     app.setWindowIcon(QIcon("resources/icons/app_icon.png"))
     
-    # 使用系统原生风格
+    # 设置高DPI缩放
+    app.setAttribute(Qt.AA_UseHighDpiPixmaps, True)
+    app.setAttribute(Qt.AA_EnableHighDpiScaling, True)
+    
+    # 加载并设置高质量字体
+    selected_font = set_application_font()
+    if selected_font:
+        print(f"使用字体: {selected_font}")
+    
+    # 优化字体渲染
+    optimize_font_rendering()
     
     # 加载并应用macOS风格样式表
     stylesheet = resource_helper.load_stylesheet("macos_style")

@@ -1,0 +1,13 @@
+__pycache__/*
+*/__pycache__
+*/__pycache__/*
+resources/fonts/*
+passwords.db
+config.json
+lxgw-wenkai-v1.511/LXGWWenKai-Light.ttf
+lxgw-wenkai-v1.511/LXGWWenKai-Medium.ttf
+lxgw-wenkai-v1.511/LXGWWenKai-Regular.ttf
+lxgw-wenkai-v1.511/LXGWWenKaiMono-Light.ttf
+lxgw-wenkai-v1.511/LXGWWenKaiMono-Medium.ttf
+lxgw-wenkai-v1.511/LXGWWenKaiMono-Regular.ttf
+lxgw-wenkai-v1.511/OFL.txt
